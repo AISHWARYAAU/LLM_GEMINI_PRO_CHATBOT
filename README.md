@@ -1,1 +1,1 @@
-# LLM_GEMINI_PRO_CHATBOT
+# code-prep-gemini-ai-course
