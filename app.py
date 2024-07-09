@@ -63,8 +63,8 @@ st.set_page_config(
 
 with st.sidebar:
     selected = option_menu(
-        'Gemini AI',
-        ['ChatBot', 'Image Captioning', 'Embed text', 'Ask me anything', '🧑‍💻Score Checker', '🕵Skill Checker'],
+        'AI-Powered Resume Screening and Assistance Tool',
+        [ '🧑‍💻Score Checker', '🕵Skill Checker','ChatBot', 'Image Captioning', 'Embed text', 'Ask me anything'],
         menu_icon='robot',
         icons=['chat-dots-fill', 'image-fill', 'textarea-t', 'patch-question-fill', 'bi-clipboard2-data', 'hash'],
         default_index=0
