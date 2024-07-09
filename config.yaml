@@ -1,0 +1,10 @@
+credentials:
+  usernames:
+    john_doe:
+      email: sugandha@gmail.com
+      name: sugandha
+      password: admin123  # Must be hashed
+
+cookie:
+  expiry_days: 30
+ 
