@@ -15,7 +15,16 @@ from gemini_utility import (
     embeddings_model_response
 )
 
-load_dotenv()  # load all our environment variables
+from docxtpl import DocxTemplate
+from datetime import datetime
+import io
+from pathlib import Path
+
+# Load environment variables
+load_dotenv()
+
+current_datetime = datetime.now()
+filename = f"generated_doc_{current_datetime.strftime('%Y%m%d_%H%M%S')}.docx"
 
 def get_gemini_pro():
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -50,25 +59,105 @@ def construct_resume_score_prompt(resume, job_description):
     I want the response as a single string in the following structure: score:%'''
     return resume_score_prompt
 
+def construct_resume_improvement_prompt(resume, job_description):
+    improvement_prompt = f'''Act as a HR Manager with 20 years of experience.
+    Compare the resume provided below with the job description given below.
+    Check for key skills in the resume that are related to the job description.
+    Provide detailed suggestions to improve the resume based on the job description.
+    Here is the Resume text: {resume}
+    Here is the Job Description: {job_description}
+    I want the response in a structured list of suggestions.'''
+    return improvement_prompt
+
 def get_result(input):
     model = get_gemini_pro()
     response = model.generate_content(input)
     return response.text
 
+def build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile, city, country, linkedin, about_me,
+                 skill_1, skill_2, skill_3, skill_4, skill_5, company_name, job_role, job_details, lang_1, lang_2, lang_3,
+                 ed_12_perc, ed_12_school, pre_degree, pre_degree_cpi, pre_degree_uni, post_degree, post_degree_cpi, post_degree_uni, temp_option):
+    # Load the template
+    doc = DocxTemplate(f'{temp_option}.docx')
+    # Define the context with dynamic values
+    context = {
+        'first_name': first_name,
+        'last_name': last_name,
+        'aspiring_role': aspiring_role,
+        'email': email,
+        'mob_prefix': mob_prefix,
+        'mobile': mobile,
+        'city': city,
+        'country': country,
+        'linkedin': linkedin,
+        'about_me': about_me,
+        'skill_1': skill_1,
+        'skill_2': skill_2,
+        'skill_3': skill_3,
+        'skill_4': skill_4,
+        'skill_5': skill_5,
+        'company_name': company_name,
+        'job_role': job_role,
+        'job_details': job_details,
+        'lang_1': lang_1,
+        'lang_2': lang_2,
+        'lang_3': lang_3,
+        'ed_12_perc': ed_12_perc,
+        'ed_12_school': ed_12_school,
+        'pre_degree': pre_degree,
+        'pre_degree_cpi': pre_degree_cpi,
+        'pre_degree_uni': pre_degree_uni,
+        'post_degree': post_degree,
+        'post_degree_cpi': post_degree_cpi,
+        'post_degree_uni': post_degree_uni
+    }
+    # Render the document with the dynamic content
+    doc.render(context)
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    st.download_button(
+        label="Download Resume",
+        key="download_resume",
+        data=buffer.read(),
+        file_name=filename,
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+# Set up Streamlit page configuration
 st.set_page_config(
     page_title="Gemini AI",
     page_icon="🧠",
     layout="centered",
 )
 
+# Sidebar menu
 with st.sidebar:
     selected = option_menu(
         'AI-Powered Resume Screening and Assistance Tool',
-        [ '🧑‍💻Score Checker', '🕵Skill Checker','ChatBot', 'Image Captioning', 'Embed text', 'Ask me anything'],
+        ['Overview', '🧑‍💻Score Checker', '🕵Skill Checker', 'ChatBot', 'Image Captioning', 'Embed text', 'Ask me anything'],
         menu_icon='robot',
-        icons=['chat-dots-fill', 'image-fill', 'textarea-t', 'patch-question-fill', 'bi-clipboard2-data', 'hash'],
+        icons=['info-circle', 'chat-dots-fill', 'image-fill', 'textarea-t', 'patch-question-fill', 'bi-clipboard2-data', 'hash'],
         default_index=0
     )
+
+# Overview page
+if selected == 'Overview':
+    st.title("🔍 Overview")
+    st.markdown("""
+    ### Welcome to the AI-Powered Resume Screening and Assistance Tool!
+
+    Here is a brief explanation of the functionalities offered by this tool:
+
+    - **🧑‍💻 Score Checker**: Upload your resume and provide a job description to get an ATS (Applicant Tracking System) score, which indicates how well your resume matches the job description.
+    - **🕵 Skill Checker**: Identify the skills missing from your resume based on the provided job description. This feature helps you understand which key skills you need to add.
+    - **ChatBot**: Interact with an AI-powered chatbot that can help you add the missing skills to your resume and provide other assistance.
+    - **Image Captioning**: Upload an image (such as an image in your resume) to get a caption. This feature can help you ensure that the images in your resume are appropriately described.
+    - **Embed Text**: Enter text to get its embeddings, useful for encryption and other advanced text processing.
+    - **Ask me anything**: Ask any type of question and get a response from the AI. This feature is designed to help you with a wide range of queries.
+
+    We hope you find this tool helpful in enhancing your resume and preparing for job applications. 
+    """)
 
 # Function to translate roles between Gemini-Pro and Streamlit terminology
 def translate_role_for_streamlit(user_role):
@@ -137,7 +226,7 @@ if selected == "Embed text":
     user_prompt = st.text_area(label='', placeholder="Enter the text to get embeddings")
 
     if st.button("Get Response"):
-        response = embeddings_model_response(user_prompt)
+      response = embeddings_model_response(user_prompt)
         st.markdown(response)
 
 # Ask me anything page
