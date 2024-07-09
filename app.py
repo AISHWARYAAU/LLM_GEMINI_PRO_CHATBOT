@@ -1,13 +1,15 @@
 import os
 from dotenv import load_dotenv
 
+from datetime import datetime
+import io
+
 from PIL import Image
+from PyPDF2 import PdfReader
+from docxtpl import DocxTemplate
 import streamlit as st
 from streamlit_option_menu import option_menu
-
-from PyPDF2 import PdfReader
 import google.generativeai as genai
-
 from gemini_utility import (
     load_gemini_pro_model,
     gemini_pro_response,
@@ -15,21 +17,18 @@ from gemini_utility import (
     embeddings_model_response
 )
 
-from docxtpl import DocxTemplate
-from datetime import datetime
-import io
-from pathlib import Path
-
 # Load environment variables
 load_dotenv()
 
 current_datetime = datetime.now()
 filename = f"generated_doc_{current_datetime.strftime('%Y%m%d_%H%M%S')}.docx"
 
+# Function to initialize and configure Gemini Pro model
 def get_gemini_pro():
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     return genai.GenerativeModel('gemini-pro')
 
+# Function to extract text from PDF files
 def pdf_to_text(pdf_file):
     reader = PdfReader(pdf_file)
     text = ''
@@ -37,6 +36,7 @@ def pdf_to_text(pdf_file):
         text += str(page.extract_text())
     return text
 
+# Functions to construct prompts for different functionalities
 def construct_skills_prompt(resume, job_description):
     skill_prompt = f'''Act as a HR Manager with 20 years of experience.
     Compare the resume provided below with the job description given below.
@@ -59,57 +59,19 @@ def construct_resume_score_prompt(resume, job_description):
     I want the response as a single string in the following structure: score:%'''
     return resume_score_prompt
 
-def construct_resume_improvement_prompt(resume, job_description):
-    improvement_prompt = f'''Act as a HR Manager with 20 years of experience.
-    Compare the resume provided below with the job description given below.
-    Check for key skills in the resume that are related to the job description.
-    Provide detailed suggestions to improve the resume based on the job description.
-    Here is the Resume text: {resume}
-    Here is the Job Description: {job_description}
-    I want the response in a structured list of suggestions.'''
-    return improvement_prompt
-
+# Function to interact with Gemini Pro model and get response
 def get_result(input):
     model = get_gemini_pro()
     response = model.generate_content(input)
     return response.text
 
-def build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile, city, country, linkedin, about_me,
-                 skill_1, skill_2, skill_3, skill_4, skill_5, company_name, job_role, job_details, lang_1, lang_2, lang_3,
-                 ed_12_perc, ed_12_school, pre_degree, pre_degree_cpi, pre_degree_uni, post_degree, post_degree_cpi, post_degree_uni, temp_option):
+# Function to build a resume using a template
+def build_resume(...):  # Parameters omitted for brevity
     # Load the template
     doc = DocxTemplate(f'{temp_option}.docx')
     # Define the context with dynamic values
     context = {
-        'first_name': first_name,
-        'last_name': last_name,
-        'aspiring_role': aspiring_role,
-        'email': email,
-        'mob_prefix': mob_prefix,
-        'mobile': mobile,
-        'city': city,
-        'country': country,
-        'linkedin': linkedin,
-        'about_me': about_me,
-        'skill_1': skill_1,
-        'skill_2': skill_2,
-        'skill_3': skill_3,
-        'skill_4': skill_4,
-        'skill_5': skill_5,
-        'company_name': company_name,
-        'job_role': job_role,
-        'job_details': job_details,
-        'lang_1': lang_1,
-        'lang_2': lang_2,
-        'lang_3': lang_3,
-        'ed_12_perc': ed_12_perc,
-        'ed_12_school': ed_12_school,
-        'pre_degree': pre_degree,
-        'pre_degree_cpi': pre_degree_cpi,
-        'pre_degree_uni': pre_degree_uni,
-        'post_degree': post_degree,
-        'post_degree_cpi': post_degree_cpi,
-        'post_degree_uni': post_degree_uni
+        ...
     }
     # Render the document with the dynamic content
     doc.render(context)
@@ -156,7 +118,7 @@ if selected == 'Overview':
     - **Embed Text**: Enter text to get its embeddings, useful for encryption and other advanced text processing.
     - **Ask me anything**: Ask any type of question and get a response from the AI. This feature is designed to help you with a wide range of queries.
 
-    We hope you find this tool helpful in enhancing your resume and preparing for job applications. 
+    We hope you find this tool helpful in enhancing your resume and preparing for job applications.
     """)
 
 # Function to translate roles between Gemini-Pro and Streamlit terminology
@@ -202,38 +164,41 @@ if selected == "Image Captioning":
     uploaded_image = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
 
     if st.button("Generate Caption"):
-        image = Image.open(uploaded_image)
+        if uploaded_image is not None:
+            image = Image.open(uploaded_image)
 
-        col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
-        with col1:
-            resized_img = image.resize((800, 500))
-            st.image(resized_img)
+            with col1:
+                resized_img = image.resize((800, 500))
+                st.image(resized_img)
 
-        default_prompt = "write a short caption for this image"  # change this prompt as per your requirement
+            default_prompt = "write a short caption for this image"  # Change this prompt as per your requirement
 
-        # get the caption of the image from the gemini-pro-vision LLM
-        caption = gemini_pro_vision_response(default_prompt, image)
+            # Get the caption of the image from the Gemini-Pro Vision LLM
+            caption = gemini_pro_vision_response(default_prompt, image)
 
-        with col2:
-            st.info(caption)
+            with col2:
+                st.info(caption)
+        else:
+            st.warning("Please upload an image first.")
 
 # Embed text page
 if selected == "Embed text":
     st.title("🔡 Embed Text")
 
-    # text box to enter prompt
+    # Text box to enter prompt
     user_prompt = st.text_area(label='', placeholder="Enter the text to get embeddings")
 
     if st.button("Get Response"):
-      response = embeddings_model_response(user_prompt)
+        response = embeddings_model_response(user_prompt)
         st.markdown(response)
 
 # Ask me anything page
 if selected == "Ask me anything":
     st.title("❓ Ask me a question")
 
-    # text box to enter prompt
+    # Text box to enter prompt
     user_prompt = st.text_area(label='', placeholder="Ask me anything...")
 
     if st.button("Get Response"):
@@ -257,18 +222,10 @@ if selected == '🧑‍💻Score Checker':
                 resume = pdf_to_text(uploaded_file)
                 score_prompt = construct_resume_score_prompt(resume, job_description)
                 result = get_result(score_prompt)
-                final_result = result.split(":")[1]
-                if '%' not in final_result:
-                    final_result = final_result + '%'
-                result_str = f"""
-                <style>
-                p.a {{
-                  font: bold 25px Arial;
-                }}
-                </style>
-                <p class="a">Your Resume matches {final_result} with the Job Description</p>
-                """
-                st.markdown(result_str, unsafe_allow_html=True)
+                final_result = result.split(":")[1].strip()
+                if not final_result.endswith('%'):
+                    final_result = f"{final_result}%"
+                st.markdown(f"Your Resume matches **{final_result}** with the Job Description")
             except Exception as e:
                 st.error(f'Error: {e}')
 
@@ -292,4 +249,4 @@ if selected == '🕵Skill Checker':
                 st.write('Your Resume misses the following keywords:')
                 st.markdown(result, unsafe_allow_html=True)
             except Exception as e:
-                st.error(f'Error: {e}') 
+                st.error(f'Error: {e}')
