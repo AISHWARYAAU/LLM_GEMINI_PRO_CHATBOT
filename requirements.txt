@@ -1,3 +1,5 @@
+pdf2image
+Pillow
 google.generativeai
 PyPDF2
 python-dotenv
