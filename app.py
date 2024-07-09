@@ -125,29 +125,11 @@ if authentication_status:
     with st.sidebar:
         selected = option_menu(
             'AI-Powered Resume Screening and Assistance Tool',
-            ['Overview', '🧑‍💻Score Checker', '🕵Skill Checker', 'ChatBot', 'Image Captioning', 'Embed text', 'Ask me anything'],
+            ['🧑‍💻Score Checker', '🕵Skill Checker', 'ChatBot', 'Image Captioning', 'Embed text', 'Ask me anything'],
             menu_icon='robot',
-            icons=['info-circle', 'chat-dots-fill', 'image-fill', 'textarea-t', 'patch-question-fill', 'bi-clipboard2-data', 'hash'],
+            icons=['chat-dots-fill', 'image-fill', 'textarea-t', 'patch-question-fill', 'bi-clipboard2-data', 'hash'],
             default_index=0
         )
-
-    # Overview page
-    if selected == 'Overview':
-        st.title("🔍 Overview")
-        st.markdown("""
-        ### Welcome to the AI-Powered Resume Screening and Assistance Tool!
-        
-        Here is a brief explanation of the functionalities offered by this tool:
-
-        - **🧑‍💻 Score Checker**: Upload your resume and provide a job description to get an ATS (Applicant Tracking System) score, which indicates how well your resume matches the job description.
-        - **🕵 Skill Checker**: Identify the skills missing from your resume based on the provided job description. This feature helps you understand which key skills you need to add.
-        - **ChatBot**: Interact with an AI-powered chatbot that can help you add the missing skills to your resume and provide other assistance.
-        - **Image Captioning**: Upload an image (such as an image in your resume) to get a caption. This feature can help you ensure that the images in your resume are appropriately described.
-        - **Embed Text**: Enter text to get its embeddings, useful for encryption and other advanced text processing.
-        - **Ask me anything**: Ask any type of question and get a response from the AI. This feature is designed to help you with a wide range of queries.
-
-        We hope you find this tool helpful in enhancing your resume and preparing for job applications. 
-        """)
 
     # Function to translate roles between Gemini-Pro and Streamlit terminology
     def translate_role_for_streamlit(user_role):
@@ -282,7 +264,7 @@ if authentication_status:
                     result = get_result(skill_prompt)
                     improvement_suggestions = get_result(improvement_prompt)
 
-                    col1, col2, col3 = st.columns(3)
+                    col1, col2 = st.columns(2)
 
                     with col1:
                         st.write('Your Resume misses the following keywords:')
@@ -292,14 +274,6 @@ if authentication_status:
                         st.write('Here are some suggestions to improve your resume:')
                         st.markdown(improvement_suggestions, unsafe_allow_html=True)
 
-                    with col3:
-                        st.write('Summary:')
-                        st.markdown("""
-                        - **ATS Score Checker**: Check how well your resume matches the job description.
-                        - **Skill Checker**: Find out which skills are missing in your resume.
-                        - **Improvement Suggestions**: Get suggestions to improve your resume.
-                        """, unsafe_allow_html=True)
-
                 except Exception as e:
                     st.error(f'Error: {e}')
 
@@ -308,3 +282,4 @@ elif authentication_status == False:
 
 elif authentication_status == None:
     st.warning('Please enter your username and password')
+
