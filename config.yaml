@@ -1,10 +1,14 @@
 credentials:
   usernames:
-    john_doe:
-      email: sugandha@gmail.com
-      name: sugandha
+    admin:
+      email: admin@gmail.com
+      name: admin
       password: admin123  # Must be hashed
 
 cookie:
   expiry_days: 30
- 
+  name: my_cookie
+  key: some_random_key
+
+preauthorized:
+  emails: []
