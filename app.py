@@ -23,39 +23,14 @@ def pdf_to_text(pdf_file):
 # Function to construct skills prompt for Gemini AI
 def construct_skills_prompt(resume, job_description):
     skill_prompt = f'''Act as a HR Manager with 20 years of experience.
-    Compare the resume provided below with the job description given below…
-[10:09, 10/07/2024] ᴬⁱˢʰʷᵃʳʸᵃ: # Imports
-import os
-from datetime import datetime
-import io
-from PyPDF2 import PdfReader
-from docxtpl import DocxTemplate
-import streamlit as st
-import google.generativeai as genai
-
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
-
-# Function to convert PDF to text
-def pdf_to_text(pdf_file):
-    reader = PdfReader(pdf_file)
-    text = ''
-    for page in reader.pages:
-        text += str(page.extract_text())
-    return text
-
-# Function to construct skills prompt for Gemini AI
-def construct_skills_prompt(resume, job_description):
-    skill_prompt = f'''Act as a HR Manager with 20 years of experience.
     Compare the resume provided below with the job description given below.
     Check for key skills in the resume that are related to the job description.
     List the missing key skillset from the resume.
     I just need the extracted missing skillset.
     Here is the Resume text: {resume}
     Here is the Job Description: {job_description}
-    I want the response as a list of missing skill words.
-    return skill_prompt'''
+    I want the response as a list of missing skill words.'''
+    return skill_prompt
 
 # Function to construct resume score prompt for Gemini AI
 def construct_resume_score_prompt(resume, job_description):
@@ -239,26 +214,28 @@ def main():
                     st.error(f'Error: {e}')
 
     elif selected == 'Skill Checker':
+        # Skill Checker Section
+        st.title("Skill Checker")
+        
+        job_description = st.text_area('Enter Job Description')
+        uploaded_file = st.file_uploader('Upload Your Resume', type=['pdf'])
+        
+        if st.button('Get Missing Skills'):
+            if job_description == '':
+                st.error('Enter Job Description')
+            elif uploaded_file is None:
+                st.error('Upload your Resume')
+            else:
+                try:
+                    resume = pdf_to_text(uploaded_file)
+                    skill_prompt = construct_skills_prompt(resume, job_description)
+                    result = get_result(skill_prompt)
+                    
+                    # Display the missing skills to the user
+                    st.write('Your Resume misses the following keywords:')
+                    st.markdown(result, unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f'Error: {e}')
 
-    # Skill Checker Section
-    st.title("Skill Checker")
-    
-    job_description = st.text_area('Enter Job Description')
-    uploaded_file = st.file_uploader('Upload Your Resume', type=['pdf'])
-    
-    if st.button('Get Missing Skills'):
-        if job_description == '':
-            st.error('Enter Job Description')
-        elif uploaded_file is None:
-            st.error('Upload your Resume')
-        else:
-            try:
-                resume = pdf_to_text(uploaded_file)
-                skill_prompt = construct_skills_prompt(resume, job_description)
-                result = get_result(skill_prompt)
-                
-                # Display the missing skills to the user
-                st.write('Your Resume misses the following keywords:')
-                st.markdown(result, unsafe_allow_html=True)
-            except Exception as e:
-                st.error(f'Error: {e}')
+if __name__ == '__main__':
+    main()
