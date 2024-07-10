@@ -15,24 +15,21 @@ load_dotenv()
 
 # Initialize Gemini AI
 def get_gemini_pro():
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        st.error("Google API key not found. Please set the GOOGLE_API_KEY environment variable.")
-        return None
-    genai.configure(api_key=api_key)
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     return genai.GenerativeModel('gemini-pro')
+
+def get_result(prompt):
+    model = get_gemini_pro()
+    response = model.predict(prompt)
+    return response.generations[0].text
 
 # Function to extract text from PDF
 def pdf_to_text(pdf_file):
-    try:
-        reader = PdfReader(pdf_file)
-        text = ''
-        for page in reader.pages:
-            text += str(page.extract_text())
-        return text
-    except Exception as e:
-        st.error(f"Error reading PDF file: {e}")
-        return ''
+    reader = PdfReader(pdf_file)
+    text = ''
+    for page in reader.pages:
+        text += str(page.extract_text())
+    return text
 
 # Construct prompt for skills comparison
 def construct_skills_prompt(resume, job_description):
@@ -65,11 +62,7 @@ def build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile
                  post_degree, post_degree_cpi, post_degree_uni, temp_option):
 
     # Load the template
-    try:
-        doc = DocxTemplate(f'templates/{temp_option}.docx')
-    except Exception as e:
-        st.error(f"Error loading template: {e}")
-        return
+    doc = DocxTemplate(f'templates/{temp_option}.docx')
 
     # Define the context with dynamic values
     context = {
@@ -105,39 +98,27 @@ def build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile
     }
 
     # Render the document with the dynamic content
-    try:
-        doc.render(context)
-    except Exception as e:
-        st.error(f"Error rendering document: {e}")
-        return
+    doc.render(context)
 
     # Save the document to a buffer
     buffer = io.BytesIO()
-    try:
-        doc.save(buffer)
-    except Exception as e:
-        st.error(f"Error saving document: {e}")
-        return
-    buffer.seek(0)
+    doc.save(buffer)
+    buffer.seek(0)  # Reset the buffer to the beginning
 
     # Provide download button for the generated resume
     st.download_button(
         label="Download Resume",
         key="download_resume",
-        data=buffer.read(),
+        data=buffer,
         file_name=f"generated_doc_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
 # Function to read PDF page and extract text
 def read_pdf_page(file, page_number):
-    try:
-        pdfReader = PdfReader(file)
-        page = pdfReader.pages[page_number]
-        return page.extract_text()
-    except Exception as e:
-        st.error(f"Error reading PDF page: {e}")
-        return ''
+    pdfReader = PdfReader(file)
+    page = pdfReader.pages[page_number]
+    return page.extract_text()
 
 # Event handler for text area change
 def on_text_area_change():
@@ -270,13 +251,11 @@ def main():
                 try:
                     resume = pdf_to_text(uploaded_file)
                     score_prompt = construct_resume_score_prompt(resume, job_description)
-                    model = get_gemini_pro()
-                    if model:
-                        result = model.generate(prompt=score_prompt)
-                        final_result = result.split(":")[1].strip()
-                        if '%' not in final_result:
-                            final_result = final_result + '%'
-                        st.markdown(f"Your Resume matches **{final_result}** with the Job Description", unsafe_allow_html=True)
+                    result = get_result(score_prompt)
+                    final_result = result.split(":")[1].strip()
+                    if '%' not in final_result:
+                        final_result = final_result + '%'
+                    st.markdown(f"Your Resume matches **{final_result}** with the Job Description", unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f'Error: {e}')
 
@@ -296,13 +275,12 @@ def main():
                 try:
                     resume = pdf_to_text(uploaded_file)
                     skill_prompt = construct_skills_prompt(resume, job_description)
-                    model = get_gemini_pro()
-                    if model:
-                        result = model.generate(prompt=skill_prompt)
-                        st.write('Your Resume misses the following keywords:')
-                        st.markdown(result, unsafe_allow_html=True)
+                    result = get_result(skill_prompt)
+                    st.write('Your Resume misses the following keywords:')
+                    st.markdown(result, unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f'Error: {e}')
 
 if __name__ == '__main__':
     main()
+
