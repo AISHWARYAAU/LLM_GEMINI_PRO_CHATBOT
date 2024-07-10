@@ -9,7 +9,6 @@ from gemini_utility import (load_gemini_pro_model,
                             gemini_pro_vision_response,
                             embeddings_model_response)
 
-
 working_dir = os.path.dirname(os.path.abspath(__file__))
 
 st.set_page_config(
@@ -54,7 +53,7 @@ if selected == 'ChatBot':
             st.markdown(message.parts[0].text)
 
     # Input field for user's message
-    user_prompt = st.chat_input("Ask Gemini-Pro...")  # Renamed for clarity
+    user_prompt = st.text_input("Ask Gemini-Pro...")  # Changed to st.text_input
     if user_prompt:
         # Add user's message to chat and display it
         st.chat_message("user").markdown(user_prompt)
