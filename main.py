@@ -41,29 +41,31 @@ if selected == 'ChatBot':
     model = load_gemini_pro_model()
 
     # Initialize chat session in Streamlit if not already present
-    if "chat_session" not in st.session_state:  # Renamed for clarity
+    if "chat_session" not in st.session_state:
         st.session_state.chat_session = model.start_chat(history=[])
+        st.session_state.chat_history = []
 
     # Display the chatbot's title on the page
     st.title("🤖 ChatBot")
 
     # Display the chat history
-    for message in st.session_state.chat_session.history:
-        with st.chat_message(translate_role_for_streamlit(message.role)):
-            st.markdown(message.parts[0].text)
+    for message in st.session_state.chat_history:
+        role, text = message
+        st.markdown(f"**{role}:** {text}")
 
     # Input field for user's message
     user_prompt = st.text_input("Ask Gemini-Pro...")  # Changed to st.text_input
     if user_prompt:
         # Add user's message to chat and display it
-        st.chat_message("user").markdown(user_prompt)
+        st.session_state.chat_history.append(("user", user_prompt))
+        st.markdown(f"**User:** {user_prompt}")
 
         # Send user's message to Gemini-Pro and get the response
-        gemini_response = st.session_state.chat_session.send_message(user_prompt)  # Renamed for clarity
+        gemini_response = st.session_state.chat_session.send_message(user_prompt)
 
         # Display Gemini-Pro's response
-        with st.chat_message("assistant"):
-            st.markdown(gemini_response.text)
+        st.session_state.chat_history.append(("assistant", gemini_response.text))
+        st.markdown(f"**Assistant:** {gemini_response.text}")
 
 
 # Image captioning page
