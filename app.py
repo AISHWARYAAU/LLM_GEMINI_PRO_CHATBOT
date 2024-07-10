@@ -1,34 +1,19 @@
+# Imports
 import os
-from dotenv import load_dotenv
-
 from datetime import datetime
 import io
-
-from PIL import Image
 from PyPDF2 import PdfReader
 from docxtpl import DocxTemplate
+from pdf2image import convert_from_bytes
+from PIL import Image
 import streamlit as st
-from streamlit_option_menu import option_menu
 import google.generativeai as genai
-from gemini_utility import (
-    load_gemini_pro_model,
-    gemini_pro_response,
-    gemini_pro_vision_response,
-    embeddings_model_response
-)
 
 # Load environment variables
+from dotenv import load_dotenv
 load_dotenv()
 
-current_datetime = datetime.now()
-filename = f"generated_doc_{current_datetime.strftime('%Y%m%d_%H%M%S')}.docx"
-
-# Function to initialize and configure Gemini Pro model
-def get_gemini_pro():
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    return genai.GenerativeModel('gemini-pro')
-
-# Function to extract text from PDF files
+# Function to convert PDF to text
 def pdf_to_text(pdf_file):
     reader = PdfReader(pdf_file)
     text = ''
@@ -36,7 +21,7 @@ def pdf_to_text(pdf_file):
         text += str(page.extract_text())
     return text
 
-# Functions to construct prompts for different functionalities
+# Function to construct skills prompt for Gemini AI
 def construct_skills_prompt(resume, job_description):
     skill_prompt = f'''Act as a HR Manager with 20 years of experience.
     Compare the resume provided below with the job description given below.
@@ -48,6 +33,7 @@ def construct_skills_prompt(resume, job_description):
     I want the response as a list of missing skill words.'''
     return skill_prompt
 
+# Function to construct resume score prompt for Gemini AI
 def construct_resume_score_prompt(resume, job_description):
     resume_score_prompt = f'''Act as a HR Manager with 20 years of experience.
     Compare the resume provided below with the job description given below.
@@ -59,27 +45,23 @@ def construct_resume_score_prompt(resume, job_description):
     I want the response as a single string in the following structure: score:%'''
     return resume_score_prompt
 
-# Function to interact with Gemini Pro model and get response
+# Function to get result from Gemini AI
 def get_result(input):
-    model = get_gemini_pro()
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    model = genai.GenerativeModel('gemini-pro')
     response = model.generate_content(input)
     return response.text
 
-# Function to translate roles between Gemini-Pro and Streamlit terminology
-def translate_role_for_streamlit(user_role):
-    if user_role == "model":
-        return "assistant"
-    else:
-        return user_role
-
-# Function to build a resume using a template
+# Function to build resume using provided details
 def build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile,
-                 city, country, linkedin, about_me, skill_1, skill_2, skill_3, skill_4, skill_5, company_name, job_role, job_details, lang_1, lang_2, lang_3,
-                 ed_12_perc, ed_12_school, pre_degree, pre_degree_cpi, pre_degree_uni, post_degree, post_degree_cpi, post_degree_uni, temp_option):
+                 city, country, linkedin, about_me, skill_1, skill_2, skill_3, skill_4, skill_5, 
+                 company_name, job_role, job_details, lang_1, lang_2, lang_3,
+                 ed_12_perc, ed_12_school, pre_degree, pre_degree_cpi, pre_degree_uni,
+                 post_degree, post_degree_cpi, post_degree_uni, temp_option):
 
-    # Load the template
-    doc = DocxTemplate(f'{temp_option}.docx')
- 
+    # Load the template based on selected option
+    doc = DocxTemplate(f'templates/{temp_option}.docx')
+
     # Define the context with dynamic values
     context = {
         'first_name': first_name,
@@ -92,11 +74,11 @@ def build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile
         'country': country,
         'linkedin': linkedin,
         'about_me': about_me,
-        'skill_1' : skill_1,
-        'skill_2' : skill_2,
-        'skill_3' : skill_3,
-        'skill_4' : skill_4,
-        'skill_5' : skill_5,
+        'skill_1': skill_1,
+        'skill_2': skill_2,
+        'skill_3': skill_3,
+        'skill_4': skill_4,
+        'skill_5': skill_5,
         'company_name': company_name,
         'job_role': job_role,
         'job_details': job_details,
@@ -116,145 +98,147 @@ def build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile
     # Render the document with the dynamic content
     doc.render(context)
 
+    # Save the document to a buffer
     buffer = io.BytesIO()
     doc.save(buffer)
     buffer.seek(0)
 
+    # Provide download button for the generated resume
     st.download_button(
         label="Download Resume",
         key="download_resume",
-        data=buffer.read(),  # Read the content of the buffer
-        file_name=filename,
+        data=buffer.read(),
+        file_name=f"generated_doc_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
+# Function to convert uploaded PDF to text
+def read_pdf_page(file, page_number):
+    pdfReader = PdfReader(file)
+    page = pdfReader.pages[page_number]
+    return page.extract_text()
+
+# Main function to run the Streamlit app
 def main():
-    st.set_page_config(page_title="Resume Builder")
+    st.set_page_config(page_title="Resume Builder and AI Tools", page_icon="📄", layout="wide")
 
-    first_name = st.text_input('Enter first name')
-    last_name = st.text_input('Enter last name')
-    aspiring_role = st.text_input('Enter the job you want to do')
-    email = st.text_input('Enter your email')
+    st.title("Resume Builder and AI Tools")
 
-    mobile_prefix_options = ['+91', '+1', '+44', '+81']  # Add your desired prefixes
+    # Sidebar for selecting AI functionalities
+    with st.sidebar:
+        selected = st.selectbox(
+            'Select AI-Powered Tool',
+            ['Build Resume', 'Resume Score Checker', 'Skill Checker'],
+        )
 
-    col1, col2 = st.columns(2)
+    if selected == 'Build Resume':
+        # Resume Builder Section
+        st.title("Build Your Resume")
 
-    with col1:
-        mob_prefix = st.selectbox('Select Mobile Prefix', mobile_prefix_options)
-
-    with col2:
-        mobile = st.text_input('Enter your mobile number')
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-        city = st.text_input('Enter your city')
-
-    with col4:
-        country = st.text_input('Enter your country')
-
-    linkedin = st.text_input('Enter your LinkedIn link')
-    about_me = st.text_area('Enter something about you')
-
-    with st.container():
-        st.subheader('Enter any 5 relevant skills')
+        first_name = st.text_input('Enter First Name')
+        last_name = st.text_input('Enter Last Name')
+        aspiring_role = st.text_input('Enter Aspiring Role')
+        email = st.text_input('Enter Email')
+        mob_prefix = st.selectbox('Select Mobile Prefix', ['+91', '+1', '+44', '+81'])
+        mobile = st.text_input('Enter Mobile Number')
+        city = st.text_input('Enter City')
+        country = st.text_input('Enter Country')
+        linkedin = st.text_input('Enter LinkedIn Link')
+        about_me = st.text_area('About Me')
+        
+        st.subheader('Skills (Enter any 5 relevant skills)')
         skill_1 = st.text_input('Skill 1')
         skill_2 = st.text_input('Skill 2')
         skill_3 = st.text_input('Skill 3')
         skill_4 = st.text_input('Skill 4')
         skill_5 = st.text_input('Skill 5')
-
-    with st.container():
-        st.subheader('Enter your most recent work experience or any other relevant experience')
-        company_name = st.text_input('Company name')
+        
+        st.subheader('Work Experience')
+        company_name = st.text_input('Company Name')
         job_role = st.text_input('Job Role')
         job_details = st.text_input('Job Details')
-
-    with st.container():
-        st.subheader('Enter any 3 languages you are fluent in (Leave blank if fewer languages known)')
+        
+        st.subheader('Languages')
         lang_1 = st.text_input('Language 1')
         lang_2 = st.text_input('Language 2')
         lang_3 = st.text_input('Language 3')
+        
+        st.subheader('Education')
+        ed_12_perc = st.text_input('12th Percentage')
+        ed_12_school = st.text_input('12th School')
+        pre_degree = st.text_input('Pre Degree')
+        pre_degree_cpi = st.text_input('Pre Degree CPI')
+        pre_degree_uni = st.text_input('Pre Degree University')
+        post_degree = st.text_input('Post Degree')
+        post_degree_cpi = st.text_input('Post Degree CPI')
+        post_degree_uni = st.text_input('Post Degree University')
+        
+        st.subheader('Select Template')
+        temp_option = st.selectbox(
+            'Choose Template',
+            ['blue_d1', 'blue_d2', 'orange_d1', 'green_d3']
+        )
+        
+        if st.button("Build Resume"):
+            build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile,
+                         city, country, linkedin, about_me, skill_1, skill_2, skill_3, skill_4, skill_5,
+                         company_name, job_role, job_details, lang_1, lang_2, lang_3,
+                         ed_12_perc, ed_12_school, pre_degree, pre_degree_cpi, pre_degree_uni,
+                         post_degree, post_degree_cpi, post_degree_uni, temp_option)
+    
+    elif selected == 'Resume Score Checker':
+        # Resume Score Checker Section
+        st.title("Resume Score Checker")
+        
+        job_description = st.text_area('Enter Job Description')
+        uploaded_file = st.file_uploader('Upload Your Resume', type=['pdf'])
+        
+        if st.button('Get Score'):
+            if job_description == '':
+                st.error('Enter Job Description')
+            elif uploaded_file is None:
+                st.error('Upload your Resume')
+            else:
+                try:
+                    resume = pdf_to_text(uploaded_file)
+                    score_prompt = construct_resume_score_prompt(resume, job_description)
+                    final_result = result.split(":")[1].strip()
 
-    with st.container():
-        st.subheader('Enter your education degrees')
+                    # Display the score to the user
+                    result_str = f"""
+                    <style>
+                    p.a {{
+                      font: bold 25px Arial;
+                    }}
+                    </style>
+                    <p class="a">Your Resume matches {final_result} with the Job Description</p>
+                    """
+                    st.markdown(result_str, unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f'Error: {e}')
 
-        col5, col6 = st.columns(2)
+    elif selected == 'Skill Checker':
+        # Skill Checker Section
+        st.title("Skill Checker")
+        
+        job_description = st.text_area('Enter Job Description')
+        uploaded_file = st.file_uploader('Upload Your Resume', type=['pdf'])
+        
+        if st.button('Get Missing Skills'):
+            if job_description == '':
+                st.error('Enter Job Description')
+            elif uploaded_file is None:
+                st.error('Upload your Resume')
+            else:
+                try:
+                    resume = pdf_to_text(uploaded_file)
+                    skill_prompt = construct_skills_prompt(resume, job_description)
+                    result = get_result(skill_prompt)
+                    st.write('Your Resume misses the following keywords:')
+                    st.markdown(result, unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f'Error: {e}')
 
-        with col5:
-            ed_12_perc = st.text_input('Enter your 12th percentage')
-
-        with col6:
-            ed_12_school = st.text_input('Enter your 12th school')
-
-        col7, col8, col9 = st.columns(3)
-
-        with col7:
-            pre_degree = st.text_input('Enter your pre-degree')
-        with col8:
-            pre_degree_cpi = st.text_input('Enter your university CPI')
-        with col9:
-            pre_degree_uni = st.text_input('Enter your university')
-
-        col10, col11, col12 = st.columns(3)
-
-        with col10:
-            post_degree = st.text_input('Enter your post-degree')
-        with col11:
-            post_degree_cpi = st.text_input('Enter your post-degree university CPI')
-        with col12:
-            post_degree_uni = st.text_input('Enter your post-degree university')
-
-    st.header('View the template to choose your resume format')
-
-    col13, col14 = st.columns(2)
-
-    with col13:
-        image = Image.open('images/blue_d1.png')
-        st.image(image, caption='Template blue_d1', width=200)
-
-    with col14:
-        image = Image.open('images/orange_d1.png')
-        st.image(image, caption='Template orange_d1', width=200)
-
-    col15, col16 = st.columns(2)
-
-    with col15:
-        image = Image.open('images/green_d3.png')
-        st.image(image, caption='Template green_d3', width=200)
-
-    with col16:
-        image = Image.open('images/blue_d2.png')
-        st.image(image, caption='Template blue_d2', width=200)
-
-    temp_option = st.selectbox(
-        'Choose your resume template',
-        ('blue_d1', 'blue_d2', 'orange_d1', 'green_d3')
-    )
-
-    if st.button("Build Resume"):
-        build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile,
-                     city, country, linkedin, about_me, skill_1, skill_2, skill_3, skill_4, skill_5, company_name, job_role, job_details, lang_1, lang_2, lang_3,
-                     ed_12_perc, ed_12_school, pre_degree, pre_degree_cpi, pre_degree_uni, post_degree, post_degree_cpi, post_degree_uni, temp_option)
-
-    st.sidebar.header("Job Description Analysis")
-    uploaded_resume = st.sidebar.file_uploader("Choose a resume file", type=["pdf"])
-    uploaded_job_desc = st.sidebar.file_uploader("Choose a job description file", type=["pdf"])
-
-    if uploaded_resume and uploaded_job_desc:
-        resume_text = pdf_to_text(uploaded_resume)
-        job_desc_text = pdf_to_text(uploaded_job_desc)
-
-        if st.sidebar.button("Check Skills"):
-            prompt = construct_skills_prompt(resume_text, job_desc_text)
-            missing_skills = get_result(prompt)
-            st.sidebar.write("Missing Skills:", missing_skills)
-
-        if st.sidebar.button("Get Resume Score"):
-            prompt = construct_resume_score_prompt(resume_text, job_desc_text)
-            resume_score = get_result(prompt)
-            st.sidebar.write("Resume Score:", resume_score)
-
-if __name__ == "__main__":
+if _name_ == '_main_':
     main()
+                    result = get_result(score_prompt)
