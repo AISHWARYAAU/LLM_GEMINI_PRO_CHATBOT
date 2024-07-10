@@ -1,4 +1,4 @@
-
+python-docx==0.9.0
 streamlit==1.23.1
 streamlit-option-menu
 Pillow==9.5.0
