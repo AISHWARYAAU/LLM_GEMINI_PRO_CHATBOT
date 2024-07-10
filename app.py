@@ -3,7 +3,6 @@ from datetime import datetime
 import io
 from PyPDF2 import PdfReader
 from docxtpl import DocxTemplate
-from pdf2image import convert_from_bytes
 from PIL import Image
 import streamlit as st
 import google.generativeai as genai
@@ -11,6 +10,9 @@ import google.generativeai as genai
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
+
+# Additional import for pdf2image
+from pdf2image import convert_from_bytes
 
 # Function to convert PDF to text
 def pdf_to_text(pdf_file):
