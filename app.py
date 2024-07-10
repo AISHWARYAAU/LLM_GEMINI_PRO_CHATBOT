@@ -55,8 +55,8 @@ def construct_skills_prompt(resume, job_description):
     I just need the extracted missing skillset.
     Here is the Resume text: {resume}
     Here is the Job Description: {job_description}
-    I want the response as a list of missing skill words.'''
-    return skill_prompt
+    I want the response as a list of missing skill words.
+    return skill_prompt'''
 
 # Function to construct resume score prompt for Gemini AI
 def construct_resume_score_prompt(resume, job_description):
