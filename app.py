@@ -20,7 +20,7 @@ def get_gemini_pro():
 
 def get_result(prompt):
     model = get_gemini_pro()
-    response = model.predict(prompt)
+    response = model.generate_text(prompt=prompt)
     return response.generations[0].text
 
 # Function to extract text from PDF
@@ -283,4 +283,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
