@@ -1,14 +1,14 @@
 import os
-import io
 from datetime import datetime
-from PIL import Image
+import io
 from PyPDF2 import PdfReader
-from pdf2image import convert_from_bytes
+from PIL import Image
 from docxtpl import DocxTemplate
 from dotenv import load_dotenv
 import streamlit as st
-from streamlit_option_menu import option_menu
+from pdf2image import convert_from_bytes
 import google.generativeai as genai
+from streamlit_option_menu import option_menu
 
 # Load environment variables
 load_dotenv()
