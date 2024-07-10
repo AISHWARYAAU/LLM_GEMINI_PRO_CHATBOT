@@ -1,4 +1,4 @@
-# Imports
+[10:06, 10/07/2024] ᴬⁱˢʰʷᵃʳʸᵃ: # Imports
 import os
 from datetime import datetime
 import io
@@ -6,6 +6,31 @@ from PyPDF2 import PdfReader
 from docxtpl import DocxTemplate
 from pdf2image import convert_from_bytes
 from PIL import Image
+import streamlit as st
+import google.generativeai as genai
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
+# Function to convert PDF to text
+def pdf_to_text(pdf_file):
+    reader = PdfReader(pdf_file)
+    text = ''
+    for page in reader.pages:
+        text += str(page.extract_text())
+    return text
+
+# Function to construct skills prompt for Gemini AI
+def construct_skills_prompt(resume, job_description):
+    skill_prompt = f'''Act as a HR Manager with 20 years of experience.
+    Compare the resume provided below with the job description given below…
+[10:09, 10/07/2024] ᴬⁱˢʰʷᵃʳʸᵃ: # Imports
+import os
+from datetime import datetime
+import io
+from PyPDF2 import PdfReader
+from docxtpl import DocxTemplate
 import streamlit as st
 import google.generativeai as genai
 
@@ -112,12 +137,6 @@ def build_resume(first_name, last_name, aspiring_role, email, mob_prefix, mobile
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
-# Function to convert uploaded PDF to text
-def read_pdf_page(file, page_number):
-    pdfReader = PdfReader(file)
-    page = pdfReader.pages[page_number]
-    return page.extract_text()
-
 # Main function to run the Streamlit app
 def main():
     st.set_page_config(page_title="Resume Builder and AI Tools", page_icon="📄", layout="wide")
@@ -202,6 +221,9 @@ def main():
                 try:
                     resume = pdf_to_text(uploaded_file)
                     score_prompt = construct_resume_score_prompt(resume, job_description)
+                    result = get_result(score_prompt)
+                    
+                    # Extract the score from the response
                     final_result = result.split(":")[1].strip()
 
                     # Display the score to the user
@@ -218,27 +240,26 @@ def main():
                     st.error(f'Error: {e}')
 
     elif selected == 'Skill Checker':
-        # Skill Checker Section
-        st.title("Skill Checker")
-        
-        job_description = st.text_area('Enter Job Description')
-        uploaded_file = st.file_uploader('Upload Your Resume', type=['pdf'])
-        
-        if st.button('Get Missing Skills'):
-            if job_description == '':
-                st.error('Enter Job Description')
-            elif uploaded_file is None:
-                st.error('Upload your Resume')
-            else:
-                try:
-                    resume = pdf_to_text(uploaded_file)
-                    skill_prompt = construct_skills_prompt(resume, job_description)
-                    result = get_result(skill_prompt)
-                    st.write('Your Resume misses the following keywords:')
-                    st.markdown(result, unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f'Error: {e}')
 
-if _name_ == '_main_':
-    main()
-                    result = get_result(score_prompt)
+    # Skill Checker Section
+    st.title("Skill Checker")
+    
+    job_description = st.text_area('Enter Job Description')
+    uploaded_file = st.file_uploader('Upload Your Resume', type=['pdf'])
+    
+    if st.button('Get Missing Skills'):
+        if job_description == '':
+            st.error('Enter Job Description')
+        elif uploaded_file is None:
+            st.error('Upload your Resume')
+        else:
+            try:
+                resume = pdf_to_text(uploaded_file)
+                skill_prompt = construct_skills_prompt(resume, job_description)
+                result = get_result(skill_prompt)
+                
+                # Display the missing skills to the user
+                st.write('Your Resume misses the following keywords:')
+                st.markdown(result, unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f'Error: {e}')
